@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Weather → ntfy</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9B%85%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="ambient" aria-hidden="true"></div>
+
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">⛅</div>
+          <div>
+            <h1>Weather <span>→</span> ntfy</h1>
+            <p>Checks the sky every few minutes. Nags you at most once a day per condition.</p>
+          </div>
+        </div>
+        <div class="topbar-status">
+          <span id="runState" class="pill pill-idle"><i></i> Connecting…</span>
+          <span id="nextCheck" class="countdown">—</span>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="card weather-card" aria-labelledby="weatherTitle">
+          <div class="card-head">
+            <h2 id="weatherTitle">Right now</h2>
+            <span id="weatherUpdated" class="micro">—</span>
+          </div>
+
+          <div class="weather-hero">
+            <div id="weatherEmoji" class="weather-emoji">🌡️</div>
+            <div class="weather-main">
+              <div class="temp"><span id="temp">—</span><sup>°C</sup></div>
+              <div id="weatherDesc" class="desc">Waiting for the first check…</div>
+              <div id="weatherLocation" class="location">—</div>
+            </div>
+          </div>
+
+          <div class="stats" id="stats">
+            <div class="stat"><span>Feels like</span><strong id="statFeels">—</strong></div>
+            <div class="stat"><span>Humidity</span><strong id="statHumidity">—</strong></div>
+            <div class="stat"><span>Wind</span><strong id="statWind">—</strong></div>
+            <div class="stat"><span>Cloud cover</span><strong id="statCloud">—</strong></div>
+          </div>
+
+          <div class="rain-panel">
+            <div class="rain-head">
+              <span>Rain chance · next 3 hours</span>
+              <strong id="rainPeak">—</strong>
+            </div>
+            <div class="rain-bars" id="rainBars"></div>
+          </div>
+
+          <div class="weather-foot">
+            <div id="alertSummary" class="alert-summary">No check has run yet.</div>
+            <div class="weather-actions">
+              <button id="checkNow" class="btn btn-primary" type="button">Check now</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card rules-card" aria-labelledby="rulesTitle">
+          <div class="card-head">
+            <h2 id="rulesTitle">Alert rules</h2>
+            <span class="micro">24h cooldown each</span>
+          </div>
+
+          <form id="configForm" autocomplete="off">
+            <div class="location-box">
+              <label for="locationSearch" class="field-label">Location</label>
+              <div class="search-row">
+                <input id="locationSearch" type="text" placeholder="Search a city or town…" />
+                <button id="searchBtn" class="btn" type="button">Search</button>
+              </div>
+              <div id="searchResults" class="search-results" hidden></div>
+              <div class="location-current">
+                <span class="dot"></span>
+                <span id="selectedLocationName">—</span>
+                <span id="selectedCoords" class="micro"></span>
+              </div>
+            </div>
+
+            <div class="rules">
+              <div class="rule" data-rule="rain">
+                <label class="switch">
+                  <input id="rainEnabled" type="checkbox" />
+                  <span class="slider"></span>
+                </label>
+                <div class="rule-text">
+                  <strong>🌧️ Rain</strong>
+                  <span>Notify when rain chance is at least</span>
+                </div>
+                <div class="rule-field"><input id="rainThreshold" type="number" min="1" max="100" step="1" /> <span>%</span></div>
+              </div>
+
+              <div class="rule" data-rule="wind">
+                <label class="switch">
+                  <input id="windEnabled" type="checkbox" />
+                  <span class="slider"></span>
+                </label>
+                <div class="rule-text">
+                  <strong>💨 Windy</strong>
+                  <span>Notify when gusts reach</span>
+                </div>
+                <div class="rule-field"><input id="windGust" type="number" min="5" max="200" step="1" /> <span>km/h</span></div>
+              </div>
+
+              <div class="rule" data-rule="sunny">
+                <label class="switch">
+                  <input id="sunnyEnabled" type="checkbox" />
+                  <span class="slider"></span>
+                </label>
+                <div class="rule-text">
+                  <strong>☀️ Sunny</strong>
+                  <span>Clear skies during the day</span>
+                </div>
+                <div class="rule-field rule-static">≤ 20% cloud</div>
+              </div>
+
+              <div class="rule" data-rule="cloudy">
+                <label class="switch">
+                  <input id="cloudyEnabled" type="checkbox" />
+                  <span class="slider"></span>
+                </label>
+                <div class="rule-text">
+                  <strong>☁️ Moody / overcast</strong>
+                  <span>Heavy cloud without rain</span>
+                </div>
+                <div class="rule-field rule-static">≥ 75% cloud</div>
+              </div>
+
+              <div class="rule" data-rule="snow">
+                <label class="switch">
+                  <input id="snowEnabled" type="checkbox" />
+                  <span class="slider"></span>
+                </label>
+                <div class="rule-text">
+                  <strong>❄️ Snow</strong>
+                  <span>Snowfall in the forecast</span>
+                </div>
+                <div class="rule-field rule-static">auto</div>
+              </div>
+
+              <div class="rule" data-rule="heat">
+                <label class="switch">
+                  <input id="heatEnabled" type="checkbox" />
+                  <span class="slider"></span>
+                </label>
+                <div class="rule-text">
+                  <strong>🥵 Heat</strong>
+                  <span>Notify above</span>
+                </div>
+                <div class="rule-field"><input id="heatTemp" type="number" min="10" max="60" step="1" /> <span>°C</span></div>
+              </div>
+
+              <div class="rule" data-rule="cold">
+                <label class="switch">
+                  <input id="coldEnabled" type="checkbox" />
+                  <span class="slider"></span>
+                </label>
+                <div class="rule-text">
+                  <strong>🥶 Cold</strong>
+                  <span>Notify below</span>
+                </div>
+                <div class="rule-field"><input id="coldTemp" type="number" min="-50" max="30" step="1" /> <span>°C</span></div>
+              </div>
+            </div>
+
+            <div class="last-sent">
+              <span class="field-label">Last notification</span>
+              <div id="lastSent" class="chips"><span class="micro">Nothing sent yet</span></div>
+            </div>
+
+            <div class="section-divider"><span>ntfy delivery</span></div>
+
+            <div class="fields">
+              <label class="field">
+                <span>ntfy server</span>
+                <input id="ntfyServer" type="url" placeholder="https://ntfy.sh" />
+              </label>
+              <label class="field">
+                <span>Topic</span>
+                <input id="ntfyTopic" type="text" placeholder="my-weather-alerts" />
+              </label>
+              <label class="field field-wide">
+                <span>Access token <em>(optional)</em></span>
+                <input id="ntfyToken" type="password" placeholder="tk_…" />
+              </label>
+            </div>
+
+            <div class="ntfy-hint">
+              Subscribe to the same topic in the ntfy app. <span id="topicSubscribe"></span>
+            </div>
+
+            <div class="inline-settings">
+              <label class="field">
+                <span>Check every</span>
+                <div class="input-unit"><input id="interval" type="number" min="1" max="1440" step="1" /><b>min</b></div>
+              </label>
+              <label class="field">
+                <span>Cooldown</span>
+                <div class="input-unit"><input id="cooldown" type="number" min="1" max="168" step="1" /><b>h</b></div>
+              </label>
+            </div>
+
+            <div class="toggles">
+              <label class="mini-check">
+                <input id="monitorEnabled" type="checkbox" />
+                <span>Monitoring active</span>
+              </label>
+              <label class="mini-check">
+                <input id="dryRun" type="checkbox" />
+                <span>Dry run (don’t actually send)</span>
+              </label>
+            </div>
+
+            <div class="form-actions">
+              <button id="saveBtn" class="btn btn-primary" type="submit">Save settings</button>
+              <button id="testBtn" class="btn" type="button">Send test</button>
+              <button id="clearLogs" class="btn btn-ghost" type="button">Clear log</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="card log-card" aria-labelledby="logTitle">
+          <div class="card-head">
+            <h2 id="logTitle">Activity</h2>
+            <span id="logCount" class="micro">0 events</span>
+          </div>
+          <div id="logList" class="log-list">
+            <div class="empty">Nothing here yet. The watcher logs sends, tests and errors.</div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="foot">
+        <span>Weather data by <a href="https://open-meteo.com" target="_blank" rel="noreferrer">Open-Meteo</a> · alerts via <a href="https://ntfy.sh" target="_blank" rel="noreferrer">ntfy</a></span>
+        <span id="serverClock">—</span>
+      </footer>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
