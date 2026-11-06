@@ -22,12 +22,14 @@ when conditions match your rules — then stays quiet about that condition for a
 - [Quick start (local)](#quick-start-local)
 - [Configuration](#configuration)
 - [ntfy setup](#ntfy-setup)
+- [Set the location from your phone](#set-the-location-from-your-phone)
 - [Docker deployment](#docker-deployment)
 - [Security](#security)
 - [Updating](#updating)
 - [API](#api)
 - [Tests](#tests)
 - [Troubleshooting](#troubleshooting)
+- [iPhone Shortcuts guide](docs/IPHONE-SHORTCUTS.md)
 - [Server deployment runbook](docs/DEPLOYMENT.md)
 
 ## How it works
@@ -88,6 +90,7 @@ dashboard is the source of truth.
 | `WEATHER_COOLDOWN_HOURS` | `24` | Per-condition cooldown. |
 | `WEATHER_RAIN_THRESHOLD` | `80` | Rain probability threshold, 1–100. |
 | `DASHBOARD_USER` / `DASHBOARD_PASS` | empty | Set both to require HTTP basic auth on the dashboard/API. |
+| `WEATHER_API_TOKEN` | empty | Enables `POST /api/location` for iPhone Shortcuts/scripts. |
 | `HOST` | `127.0.0.1` | Listen address. Container images set `0.0.0.0`. |
 | `PORT` | `4321` | Listen port. |
 | `DATA_DIR` | `./data` | Where config/state/logs are stored. |
@@ -190,6 +193,36 @@ push only works from a PWA installed via **Share → Add to Home Screen**.
 - iOS Focus/DND can still silence notifications; allow ntfy in
   **Settings → Notifications** and disable Focus for testing.
 
+## Set the location from your phone
+
+Set `WEATHER_API_TOKEN` to a long random value, restart the container, and call:
+
+```http
+POST https://weather.example.com/api/location
+Content-Type: application/json
+X-Weather-Token: <location-api-token>
+
+{ "query": "Coimbatore" }
+```
+
+Or send exact coordinates:
+
+```json
+{ "name": "Home", "latitude": 11.0168, "longitude": 76.9558 }
+```
+
+The endpoint validates and saves the location, then runs a weather check. The token
+only grants access to location updates — it cannot read config/logs or send arbitrary
+notifications. The dashboard still uses its own basic auth.
+
+This makes iOS Shortcuts and automations possible: one-tap cities, Siri, arrival/
+departure, Wi-Fi, time-of-day, CarPlay and current-GPS shortcuts. See
+**[docs/IPHONE-SHORTCUTS.md](docs/IPHONE-SHORTCUTS.md)** for step-by-step recipes.
+
+The endpoint must be reachable from the phone: expose the dashboard through your
+Cloudflare Tunnel (e.g. `weather.example.com → http://172.17.0.1:3102`) or connect
+the phone to a VPN.
+
 ## Docker deployment
 
 The repo ships a `Dockerfile` and `compose.yaml` (non-root, healthcheck, data volume).
@@ -259,6 +292,7 @@ Data lives in the `./data` volume and survives rebuilds.
 | `GET /api/bootstrap` | Config (token masked), current weather, monitor state, recent logs. |
 | `PUT /api/config` | Save settings (validated + clamped). |
 | `GET /api/geocode?q=pune` | Location search via Open-Meteo geocoding. |
+| `POST /api/location` | Set the location from Shortcuts/scripts (requires `WEATHER_API_TOKEN`). |
 | `POST /api/check` | Run a check immediately. |
 | `POST /api/test` | Send (or dry-run) a test notification. |
 | `DELETE /api/logs` | Clear the activity log. |

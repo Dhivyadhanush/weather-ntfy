@@ -30,7 +30,7 @@ export class Monitor {
       return;
     }
     this.running = true;
-    this.scheduleNext(runSoon ? 750 : this.intervalMs);
+    this.scheduleNext(runSoon ? 750 : this.intervalMs());
   }
 
   intervalMs() {

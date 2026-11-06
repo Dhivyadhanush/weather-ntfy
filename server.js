@@ -13,6 +13,7 @@ const HOST = process.env.HOST || '127.0.0.1';
 const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, 'data');
 const DASHBOARD_USER = process.env.DASHBOARD_USER || '';
 const DASHBOARD_PASS = process.env.DASHBOARD_PASS || '';
+const WEATHER_API_TOKEN = process.env.WEATHER_API_TOKEN || '';
 
 const store = new Store(DATA_DIR);
 await store.init();
@@ -67,6 +68,7 @@ function snapshot() {
       source: 'Open-Meteo (no API key)',
       cooldownDefault: 24,
       authEnabled: Boolean(DASHBOARD_USER && DASHBOARD_PASS),
+      locationApiEnabled: Boolean(WEATHER_API_TOKEN),
     },
   };
 }
@@ -91,6 +93,15 @@ function isAuthorized(req) {
     decoded.slice(0, separator) === DASHBOARD_USER &&
     decoded.slice(separator + 1) === DASHBOARD_PASS
   );
+}
+
+/** Dedicated token for the location API (iPhone Shortcuts, scripts, etc.). */
+function hasApiToken(req) {
+  if (!WEATHER_API_TOKEN) return false;
+  const direct = req.headers['x-weather-token'] ?? req.headers['x-api-key'];
+  if (typeof direct === 'string' && direct === WEATHER_API_TOKEN) return true;
+  const bearer = /^Bearer\s+(.+)$/i.exec(req.headers.authorization ?? '');
+  return Boolean(bearer && bearer[1] === WEATHER_API_TOKEN);
 }
 
 async function geocode(query) {
@@ -136,7 +147,8 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
   const { pathname } = url;
 
-  if (pathname !== '/api/health' && !isAuthorized(req)) {
+  const apiTokenAllowed = pathname === '/api/location' && hasApiToken(req);
+  if (pathname !== '/api/health' && !isAuthorized(req) && !apiTokenAllowed) {
     res.writeHead(401, {
       'WWW-Authenticate': 'Basic realm="Weather ntfy", charset="UTF-8"',
       'Content-Type': 'text/plain; charset=utf-8',
@@ -178,6 +190,80 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, results });
     }
 
+    if (pathname === '/api/location' && (req.method === 'POST' || req.method === 'PUT')) {
+      const body = await readBody(req);
+      const query = typeof body.query === 'string' ? body.query.trim() : '';
+      let location;
+
+      if (query) {
+        const results = await geocode(query);
+        if (!results.length) {
+          return sendJson(res, 404, { ok: false, error: `No location found for "${query}".` });
+        }
+        const hit = results[0];
+        location = {
+          name: hit.name,
+          latitude: hit.latitude,
+          longitude: hit.longitude,
+          timezone: 'auto',
+        };
+      } else {
+        const latitude = Number(body.latitude);
+        const longitude = Number(body.longitude);
+        if (
+          !Number.isFinite(latitude) ||
+          !Number.isFinite(longitude) ||
+          latitude < -90 ||
+          latitude > 90 ||
+          longitude < -180 ||
+          longitude > 180
+        ) {
+          return sendJson(res, 400, {
+            ok: false,
+            error: 'Provide { "query": "City" } or valid { "latitude": ..., "longitude": ... }.',
+          });
+        }
+        const name =
+          typeof body.name === 'string' && body.name.trim()
+            ? body.name.trim().slice(0, 120)
+            : `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
+        location = { name, latitude, longitude, timezone: 'auto' };
+      }
+
+      const updated = structuredClone(store.config);
+      updated.location = location;
+      store.config = normalizeConfig(updated, store.config);
+      await store.saveConfig();
+
+      await store.appendLog({
+        kind: 'info',
+        title: 'Location updated',
+        message: `${store.config.location.name} (${store.config.location.latitude}, ${store.config.location.longitude}) set via API`,
+        trigger: 'api',
+      });
+
+      monitor.stop();
+      const check = await monitor.runCheck('api');
+      if (store.config.schedule.enabled) monitor.restart({ runSoon: false });
+
+      const weather =
+        check.ok && store.state.lastWeather
+          ? {
+              description: store.state.lastWeather.current.description,
+              temperature: store.state.lastWeather.current.temperature,
+              emoji: store.state.lastWeather.current.emoji,
+              rainChance: store.state.lastWeather.window.maxProbability,
+            }
+          : null;
+
+      return sendJson(res, 200, {
+        ok: true,
+        location: store.config.location,
+        weather,
+        message: `Location set to ${store.config.location.name}.`,
+      });
+    }
+
     if (pathname === '/api/check' && req.method === 'POST') {
       const result = await monitor.runCheck('manual');
       return sendJson(res, result.ok ? 200 : 500, { ...result, state: snapshot().state });
@@ -204,6 +290,7 @@ const server = http.createServer(async (req, res) => {
     return sendJson(res, 405, { ok: false, error: 'Method not allowed' });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    console.error(`[${new Date().toISOString()}] ${req.method} ${pathname} failed:`, err);
     return sendJson(res, 500, { ok: false, error: message });
   }
 });

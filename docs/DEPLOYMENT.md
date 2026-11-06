@@ -146,6 +146,9 @@ WEATHER_RAIN_THRESHOLD=80
 
 DASHBOARD_USER=admin
 DASHBOARD_PASS=replace-with-a-long-random-password
+
+# Token for the iPhone Shortcuts location API (generate with: openssl rand -hex 24)
+WEATHER_API_TOKEN=replace-with-a-long-random-token
 ```
 
 Notes:
@@ -202,6 +205,26 @@ curl -s -u 'admin:your-dashboard-password' -X POST http://172.17.0.1:3102/api/te
 
 Expected: health `ok`, config shows the token as masked (`tokenSet: true`), and the
 test returns an ntfy HTTP `200`. Check the `weather` topic in the ntfy app.
+
+## 6b. Location API for iPhone Shortcuts
+
+`WEATHER_API_TOKEN` enables a scoped endpoint that lets Shortcuts change the weather
+location without exposing the dashboard password:
+
+```bash
+curl -s -X POST https://weather.example.com/api/location \
+  -H 'X-Weather-Token: <location-api-token>' \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"Coimbatore"}'
+```
+
+Test it before building the Shortcut. The endpoint updates the location and triggers
+a check. Full copy-paste Shortcut recipes (city menu, current GPS, arrival/Wi-Fi
+automations) are in **[IPHONE-SHORTCUTS.md](IPHONE-SHORTCUTS.md)**.
+
+Because Shortcuts on cellular need a public URL, expose the dashboard at
+`https://weather.example.com` via the tunnel/proxy before using the API from outside
+the house. A VPN to the home network also works.
 
 ## 7. Expose the dashboard
 
@@ -273,6 +296,7 @@ Rotate the dashboard password by editing `DASHBOARD_PASS` in `.env`, then
 - [ ] HTTPS only (reverse proxy or tunnel).
 - [ ] ntfy uses `NTFY_AUTH_DEFAULT_ACCESS=deny-all` with scoped users/tokens.
 - [ ] Weather app token is write-only; phone user is read-only.
+- [ ] `WEATHER_API_TOKEN` is long, random, and only used in Shortcut headers (HTTPS).
 - [ ] Topic name is hard to guess (especially if anonymous read is allowed).
 - [ ] Tokens/passwords are rotated if exposed in chat or logs.
 
