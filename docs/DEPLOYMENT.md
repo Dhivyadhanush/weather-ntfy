@@ -213,14 +213,14 @@ location without exposing the dashboard password:
 
 ```bash
 # simplest (no request body)
-curl -s 'https://weather.example.com/api/location?query=Coimbatore' \
+curl -s 'https://weather.example.com/api/location?query=London' \
   -H 'X-Weather-Token: <location-api-token>'
 
 # or with a JSON body
 curl -s -X POST https://weather.example.com/api/location \
   -H 'X-Weather-Token: <location-api-token>' \
   -H 'Content-Type: application/json' \
-  -d '{"query":"Coimbatore"}'
+  -d '{"query":"London"}'
 ```
 
 Test it before building the Shortcut. The endpoint updates the location and triggers

@@ -31,14 +31,14 @@ Wi-Fi network.
 The easiest form for Shortcuts uses **GET and no request body**:
 
 ```http
-GET https://weather.example.com/api/location?query=Coimbatore
+GET https://weather.example.com/api/location?query=London
 X-Weather-Token: <location-api-token>
 ```
 
 Coordinates and a label:
 
 ```http
-GET https://weather.example.com/api/location?latitude=11.0168&longitude=76.9558&name=Home
+GET https://weather.example.com/api/location?latitude=51.5074&longitude=-0.1278&name=Home
 X-Weather-Token: <location-api-token>
 ```
 
@@ -49,7 +49,7 @@ POST https://weather.example.com/api/location
 Content-Type: application/json
 X-Weather-Token: <location-api-token>
 
-{ "query": "Coimbatore" }
+{ "query": "London" }
 ```
 
 The response looks like:
@@ -57,9 +57,9 @@ The response looks like:
 ```json
 {
   "ok": true,
-  "location": { "name": "Coimbatore, Tamil Nadu, India", "latitude": 11.0168, "longitude": 76.9558, "timezone": "auto" },
+  "location": { "name": "London, England, United Kingdom", "latitude": 51.5074, "longitude": -0.1278, "timezone": "auto" },
   "weather": { "description": "Overcast", "temperature": 27.3, "emoji": "☁️", "rainChance": 59 },
-  "message": "Location set to Coimbatore, Tamil Nadu, India."
+  "message": "Location set to London, England, United Kingdom."
 }
 ```
 
@@ -77,7 +77,7 @@ in **File** mode.
 
 - Tap **Show More**.
 - Tap the **Request Body** dropdown and choose **JSON** (not File).
-- Add a field: key `query`, type **Text** (not File/Image), value `Coimbatore`.
+- Add a field: key `query`, type **Text** (not File/Image), value `London`.
 
 Or just use the **GET** form above — no body, no picker, nothing to configure.
 
@@ -86,7 +86,7 @@ Or just use the **GET** form above — no body, no picker, nothing to configure.
 1. Open **Shortcuts → +**.
 2. Add **Get Contents of URL**.
 3. URL:
-   `https://weather.example.com/api/location?query=Coimbatore`
+   `https://weather.example.com/api/location?query=London`
    (URL-encode spaces, e.g. `New%20York`.)
 4. Tap **Show More** → Method **GET**.
 5. Add header `X-Weather-Token` = `<location-api-token>`.

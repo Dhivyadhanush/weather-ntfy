@@ -23,6 +23,7 @@ when conditions match your rules — then stays quiet about that condition for a
 - [Configuration](#configuration)
 - [ntfy setup](#ntfy-setup)
 - [Set the location from your phone](#set-the-location-from-your-phone)
+- [Custom domain](#custom-domain)
 - [Docker deployment](#docker-deployment)
 - [Security](#security)
 - [Updating](#updating)
@@ -195,48 +196,127 @@ push only works from a PWA installed via **Share → Add to Home Screen**.
 
 ## Set the location from your phone
 
-Set `WEATHER_API_TOKEN` to a long random value, restart the container, and call:
+`WEATHER_API_TOKEN` enables a scoped endpoint for iOS Shortcuts, scripts and home
+automations. It changes the location and immediately runs a weather check. The
+dedicated token is only accepted on `/api/location` — it cannot be used for the config,
+logs or notification endpoints. The dashboard still uses
+`DASHBOARD_USER`/`DASHBOARD_PASS`.
 
-**Simplest for Shortcuts (no request body):**
+Send the token in **one** of these headers (HTTPS only):
+
+- `X-Weather-Token: <location-api-token>` (recommended)
+- `X-Api-Key: <location-api-token>`
+- `Authorization: Bearer <location-api-token>`
+
+### GET (no request body — best for Shortcuts)
 
 ```http
-GET https://weather.example.com/api/location?query=Coimbatore
+GET https://weather.example.com/api/location?query=London
 X-Weather-Token: <location-api-token>
 ```
 
-Coordinates work the same way:
+Coordinates and a label (skips geocoding):
 
 ```http
-GET https://weather.example.com/api/location?latitude=11.0168&longitude=76.9558&name=Home
+GET https://weather.example.com/api/location?latitude=51.5074&longitude=-0.1278&name=Home
 X-Weather-Token: <location-api-token>
 ```
 
-**Or use a JSON body** with `POST`:
+### POST / PUT with JSON
 
 ```http
 POST https://weather.example.com/api/location
 Content-Type: application/json
 X-Weather-Token: <location-api-token>
 
-{ "query": "Coimbatore" }
+{ "query": "London" }
 ```
 
-The endpoint validates and saves the location, then runs a weather check. The token
-only grants access to location updates — it cannot read config/logs or send arbitrary
-notifications. The dashboard still uses its own basic auth.
+```json
+{ "name": "Home", "latitude": 51.5074, "longitude": -0.1278 }
+```
 
-For fixed cities, prefer coordinates in the URL (e.g.
-`?latitude=11.0168&longitude=76.9558&name=Home`): it skips geocoding, is faster, and
-works even if the geocoding service is briefly unavailable. Successful `query`
-lookups are cached for 6 hours.
+### Response
 
-This makes iOS Shortcuts and automations possible: one-tap cities, Siri, arrival/
-departure, Wi-Fi, time-of-day, CarPlay and current-GPS shortcuts. See
-**[docs/IPHONE-SHORTCUTS.md](docs/IPHONE-SHORTCUTS.md)** for step-by-step recipes.
+```json
+{
+  "ok": true,
+  "location": {
+    "name": "London, England, United Kingdom",
+    "latitude": 51.5074,
+    "longitude": -0.1278,
+    "timezone": "auto"
+  },
+  "weather": {
+    "description": "Showers",
+    "temperature": 23.3,
+    "emoji": "🌧️",
+    "rainChance": 100
+  },
+  "message": "Location set to London, England, United Kingdom."
+}
+```
 
-The endpoint must be reachable from the phone: expose the dashboard through your
-Cloudflare Tunnel (e.g. `weather.example.com → http://172.17.0.1:3102`) or connect
-the phone to a VPN.
+### Errors
+
+| Status | Meaning |
+| --- | --- |
+| `200` | Location saved and a weather check ran. |
+| `400` | Missing/invalid `query` or coordinates. |
+| `401` | Missing/wrong `WEATHER_API_TOKEN`, or dashboard auth required. |
+| `404` | The `query` did not match any place. |
+| `503` | Geocoding is temporarily unavailable; retry or use coordinates. |
+| `500` | Unexpected error — check the container logs. |
+
+### Reliability and caching
+
+- A `query` is geocoded with Open-Meteo and the **first** match is used.
+- Geocoding retries up to 3 times, then returns `503` with a clear message.
+- Successful city lookups are cached in memory for **6 hours**.
+- Coordinates skip geocoding entirely — faster and independent of that service.
+
+### Shortcuts
+
+This enables one-tap cities, Siri, arrival/departure, Wi-Fi, time-of-day, CarPlay and
+current-GPS shortcuts. See **[docs/IPHONE-SHORTCUTS.md](docs/IPHONE-SHORTCUTS.md)** for
+copy-paste recipes, including the Request Body “File vs JSON” pitfall.
+
+The endpoint must be reachable from the phone: expose the app through a custom domain
+(Cloudflare Tunnel or reverse proxy) or connect the phone to a VPN.
+
+## Custom domain
+
+The app is domain-agnostic; point any hostname at it and terminate TLS at your proxy.
+
+### Cloudflare Tunnel
+
+**Zero Trust → Networks → Tunnels → your tunnel → Public Hostname → Add**:
+
+- Subdomain: `weather`
+- Domain: `example.com`
+- Service: `HTTP`
+- URL: `172.17.0.1:3102` (or `weather-ntfy:4321` if the tunnel shares the Docker network)
+
+No app restart is needed. Add a Cloudflare Access policy if the dashboard should not
+be open to the internet; the app already has its own basic auth.
+
+### Caddy reverse proxy
+
+```caddyfile
+weather.example.com {
+    reverse_proxy 172.17.0.1:3102
+}
+```
+
+### Domain checklist
+
+1. DNS/tunnel route resolves to the app.
+2. `https://weather.example.com/api/health` returns `200` with JSON.
+3. `DASHBOARD_USER`/`DASHBOARD_PASS` are set.
+4. `WEATHER_API_TOKEN` is set if you use Shortcuts/scripts.
+5. If Cloudflare Access is enabled, add its service-token headers to Shortcuts:
+   `CF-Access-Client-Id` and `CF-Access-Client-Secret`.
+6. Test the location API with `curl` before relying on the automation.
 
 ## Docker deployment
 
@@ -307,7 +387,7 @@ Data lives in the `./data` volume and survives rebuilds.
 | `GET /api/bootstrap` | Config (token masked), current weather, monitor state, recent logs. |
 | `PUT /api/config` | Save settings (validated + clamped). |
 | `GET /api/geocode?q=pune` | Location search via Open-Meteo geocoding. |
-| `GET`/`POST /api/location` | Set the location from Shortcuts/scripts (requires `WEATHER_API_TOKEN`). |
+| `GET`, `POST`, `PUT` /api/location | Set the location from Shortcuts/scripts (requires `WEATHER_API_TOKEN`). |
 | `POST /api/check` | Run a check immediately. |
 | `POST /api/test` | Send (or dry-run) a test notification. |
 | `DELETE /api/logs` | Clear the activity log. |
