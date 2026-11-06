@@ -225,6 +225,11 @@ The endpoint validates and saves the location, then runs a weather check. The to
 only grants access to location updates — it cannot read config/logs or send arbitrary
 notifications. The dashboard still uses its own basic auth.
 
+For fixed cities, prefer coordinates in the URL (e.g.
+`?latitude=11.0168&longitude=76.9558&name=Home`): it skips geocoding, is faster, and
+works even if the geocoding service is briefly unavailable. Successful `query`
+lookups are cached for 6 hours.
+
 This makes iOS Shortcuts and automations possible: one-tap cities, Siri, arrival/
 departure, Wi-Fi, time-of-day, CarPlay and current-GPS shortcuts. See
 **[docs/IPHONE-SHORTCUTS.md](docs/IPHONE-SHORTCUTS.md)** for step-by-step recipes.

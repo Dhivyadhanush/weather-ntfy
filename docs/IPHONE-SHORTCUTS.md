@@ -65,7 +65,9 @@ The response looks like:
 
 The update saves the config and immediately runs a weather check (which may send an
 alert if conditions match). A `query` uses Open-Meteo geocoding and picks the first
-match; coordinates are exact and skip geocoding.
+match; coordinates are exact and skip geocoding. Successful city lookups are cached
+for 6 hours. If the geocoding service has a transient outage, prefer coordinates in
+your Shortcut — it makes the request faster and independent of that service.
 
 ## If the Request Body keeps opening Photos
 
@@ -152,6 +154,7 @@ confirmation.
 | --- | --- |
 | `401 Authentication required` | Missing/wrong `X-Weather-Token`, or `WEATHER_API_TOKEN` is empty; restart after setting it. |
 | `404 No location found` | The `query` didn't geocode; use coordinates or a simpler city name. |
+| `503 Geocoding temporarily unavailable` | Transient Open-Meteo issue. Retry, or use `latitude`/`longitude` to skip geocoding. The server caches successful lookups for 6h. |
 | `400` | Provide either `query` or valid `latitude`/`longitude`. |
 | Shortcut times out | The hostname is not reachable from the phone (tunnel/VPN), or the server is down. |
 | Location changes but no alert | Alerts are rule-based and have per-condition cooldowns; use **Send test** to verify ntfy. |

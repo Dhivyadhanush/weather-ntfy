@@ -104,24 +104,49 @@ function hasApiToken(req) {
   return Boolean(bearer && bearer[1] === WEATHER_API_TOKEN);
 }
 
+const geocodeCache = new Map();
+const GEOCODE_TTL_MS = 6 * 3_600_000;
+
 async function geocode(query) {
+  const key = query.trim().toLowerCase();
+  const cached = geocodeCache.get(key);
+  if (cached && Date.now() - cached.at < GEOCODE_TTL_MS) return cached.results;
+
   const params = new URLSearchParams({ name: query, count: '8', language: 'en', format: 'json' });
-  const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params}`, {
-    signal: AbortSignal.timeout(12_000),
-    headers: { 'User-Agent': 'weather-ntfy/1.0' },
-  });
-  if (!res.ok) throw new Error(`Geocoding responded ${res.status}`);
-  const data = await res.json();
-  return (data.results ?? []).map((r) => ({
-    name: [r.name, r.admin1, r.country].filter(Boolean).join(', '),
-    shortName: r.name,
-    admin1: r.admin1 ?? '',
-    country: r.country ?? '',
-    latitude: r.latitude,
-    longitude: r.longitude,
-    timezone: r.timezone ?? 'auto',
-    population: r.population ?? 0,
-  }));
+  let lastError;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params}`, {
+        signal: AbortSignal.timeout(8_000),
+        headers: { 'User-Agent': 'weather-ntfy/1.0' },
+      });
+      if (!res.ok) throw new Error(`Geocoding responded ${res.status}`);
+      const data = await res.json();
+      const results = (data.results ?? []).map((r) => ({
+        name: [r.name, r.admin1, r.country].filter(Boolean).join(', '),
+        shortName: r.name,
+        admin1: r.admin1 ?? '',
+        country: r.country ?? '',
+        latitude: r.latitude,
+        longitude: r.longitude,
+        timezone: r.timezone ?? 'auto',
+        population: r.population ?? 0,
+      }));
+
+      if (geocodeCache.size > 100) {
+        geocodeCache.delete(geocodeCache.keys().next().value);
+      }
+      geocodeCache.set(key, { at: Date.now(), results });
+      return results;
+    } catch (err) {
+      lastError = err;
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+    }
+  }
+
+  const reason = lastError instanceof Error ? lastError.message : String(lastError);
+  throw new Error(`Geocoding temporarily unavailable: ${reason}`);
 }
 
 async function serveStatic(req, res, pathname) {
@@ -198,7 +223,18 @@ const server = http.createServer(async (req, res) => {
       let location;
 
       if (query) {
-        const results = await geocode(query);
+        let results;
+        try {
+          results = await geocode(query);
+        } catch (err) {
+          const reason = err instanceof Error ? err.message : String(err);
+          console.error(`Geocoding failed for "${query}":`, reason);
+          return sendJson(res, 503, {
+            ok: false,
+            error:
+              'Geocoding is temporarily unavailable. Retry in a moment, or use latitude/longitude instead of query.',
+          });
+        }
         if (!results.length) {
           return sendJson(res, 404, { ok: false, error: `No location found for "${query}".` });
         }
