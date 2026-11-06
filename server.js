@@ -10,8 +10,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const PORT = Number(process.env.PORT) || 4321;
 const HOST = process.env.HOST || '127.0.0.1';
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, 'data');
 
-const store = new Store(path.join(__dirname, 'data'));
+const store = new Store(DATA_DIR);
 await store.init();
 const monitor = new Monitor(store);
 
@@ -111,6 +112,15 @@ const server = http.createServer(async (req, res) => {
   const { pathname } = url;
 
   try {
+    if (pathname === '/api/health' && req.method === 'GET') {
+      return sendJson(res, 200, {
+        ok: true,
+        running: monitor.running,
+        lastCheck: store.state.lastCheck,
+        lastError: store.state.lastError,
+      });
+    }
+
     if (pathname === '/api/bootstrap' && req.method === 'GET') {
       return sendJson(res, 200, snapshot());
     }
@@ -162,7 +172,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`\n  Weather → ntfy  running at http://${HOST}:${PORT}\n`);
-  console.log(`  data dir: ${path.join(__dirname, 'data')}`);
+  console.log(`  data dir: ${DATA_DIR}`);
   console.log(`  polling every ${monitor.config.schedule.intervalMinutes} min · cooldown ${monitor.config.schedule.cooldownHours}h`);
   console.log(
     store.config.ntfy.dryRun

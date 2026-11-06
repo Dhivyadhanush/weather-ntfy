@@ -136,3 +136,55 @@ export function normalizeConfig(input, prev = DEFAULT_CONFIG) {
 
   return base;
 }
+
+function envBool(value, fallback) {
+  if (value === undefined || value === '') return fallback;
+  return !['0', 'false', 'no', 'off'].includes(String(value).trim().toLowerCase());
+}
+
+/** True when a Docker/CI environment supplies initial settings. */
+export function hasEnvConfig(env = process.env) {
+  return Boolean(
+    env.NTFY_URL ||
+      env.NTFY_SERVER ||
+      env.NTFY_TOPIC ||
+      env.NTFY_TOKEN ||
+      env.WEATHER_LOCATION_NAME ||
+      env.WEATHER_LAT ||
+      env.WEATHER_LON,
+  );
+}
+
+/**
+ * Builds the initial config from environment variables. Used only on first boot,
+ * before data/config.json exists; afterwards the dashboard owns the config.
+ */
+export function configFromEnv(env = process.env, base = DEFAULT_CONFIG) {
+  const config = structuredClone(base);
+
+  const server = env.NTFY_URL ?? env.NTFY_SERVER;
+  if (server) config.ntfy.server = server;
+  if (env.NTFY_TOPIC) config.ntfy.topic = env.NTFY_TOPIC;
+  if (env.NTFY_TOKEN) config.ntfy.token = env.NTFY_TOKEN;
+  config.ntfy.dryRun = envBool(env.NTFY_DRY_RUN, config.ntfy.dryRun);
+
+  if (env.WEATHER_LOCATION_NAME) config.location.name = env.WEATHER_LOCATION_NAME;
+  if (env.WEATHER_LAT !== undefined && env.WEATHER_LAT !== '') {
+    config.location.latitude = Number(env.WEATHER_LAT);
+  }
+  if (env.WEATHER_LON !== undefined && env.WEATHER_LON !== '') {
+    config.location.longitude = Number(env.WEATHER_LON);
+  }
+
+  if (env.WEATHER_INTERVAL_MINUTES) {
+    config.schedule.intervalMinutes = Number(env.WEATHER_INTERVAL_MINUTES);
+  }
+  if (env.WEATHER_COOLDOWN_HOURS) {
+    config.schedule.cooldownHours = Number(env.WEATHER_COOLDOWN_HOURS);
+  }
+  if (env.WEATHER_RAIN_THRESHOLD) {
+    config.alerts.rain.threshold = Number(env.WEATHER_RAIN_THRESHOLD);
+  }
+
+  return normalizeConfig(config, base);
+}

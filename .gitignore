@@ -3,5 +3,6 @@ data/
 .env
 .env.*
 !.env.example
+compose.override.yaml
 .DS_Store
 *.log

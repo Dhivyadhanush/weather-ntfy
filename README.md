@@ -58,8 +58,40 @@ Dry runs are **not** counted against the cooldown, so switching to live mode is 
   your LAN (the dashboard has no login, so keep it private).
 - Change the port with `PORT=8080 npm start`.
 - Settings and history live in `data/` (`config.json`, `state.json`, `logs.json`).
+  The config file is written with mode `0600` because it may contain an ntfy token.
 - Keep it running with `pm2 start server.js --name weather-ntfy`, a launchd plist,
   or any process manager. `npm run dev` uses `node --watch`.
+
+## Docker
+
+```bash
+cp .env.example .env      # fill in topic/token/location
+docker compose up -d --build
+docker compose logs -f
+```
+
+The container listens on `4321` and the default compose file publishes it on
+`127.0.0.1:4321`. Put it behind your own reverse proxy or tunnel if you need remote
+access; the dashboard has no authentication.
+
+Environment variables (`NTFY_URL`, `NTFY_TOPIC`, `NTFY_TOKEN`, `NTFY_DRY_RUN`,
+`WEATHER_LOCATION_NAME`, `WEATHER_LAT`, `WEATHER_LON`, `WEATHER_INTERVAL_MINUTES`,
+`WEATHER_COOLDOWN_HOURS`, `WEATHER_RAIN_THRESHOLD`) seed `data/config.json` on the
+very first boot. After that the dashboard is the source of truth and env changes are
+ignored. Set `DATA_DIR` to relocate the data folder.
+
+A `compose.override.yaml` (gitignored) is handy for host-specific ports and networks:
+
+```yaml
+services:
+  weather-ntfy:
+    ports: !override
+      - "172.17.0.1:3102:4321"
+    networks: [homenet]
+networks:
+  homenet:
+    external: true
+```
 
 ## Tests
 

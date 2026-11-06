@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildNotification, evaluateAlerts } from '../src/alerts.js';
-import { DEFAULT_CONFIG, normalizeConfig } from '../src/config.js';
+import { DEFAULT_CONFIG, configFromEnv, normalizeConfig } from '../src/config.js';
 
 function makeConfig(overrides = {}) {
   const config = structuredClone(DEFAULT_CONFIG);
@@ -117,6 +117,32 @@ test('combined notification keeps every alert and the highest priority', () => {
   assert.match(note.message, /Rain likely/);
   assert.match(note.message, /Strong wind/);
   assert.match(note.message, new RegExp(config.location.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+});
+
+test('environment variables seed the first-run config', () => {
+  const config = configFromEnv({
+    NTFY_URL: 'http://ntfy:80',
+    NTFY_TOPIC: 'weather',
+    NTFY_TOKEN: 'tk_testvalue',
+    NTFY_DRY_RUN: 'false',
+    WEATHER_LOCATION_NAME: 'Chennai, Tamil Nadu, India',
+    WEATHER_LAT: '13.0878',
+    WEATHER_LON: '80.2785',
+    WEATHER_INTERVAL_MINUTES: '10',
+    WEATHER_COOLDOWN_HOURS: '12',
+    WEATHER_RAIN_THRESHOLD: '70',
+  });
+
+  assert.equal(config.ntfy.server, 'http://ntfy:80');
+  assert.equal(config.ntfy.topic, 'weather');
+  assert.equal(config.ntfy.token, 'tk_testvalue');
+  assert.equal(config.ntfy.dryRun, false);
+  assert.equal(config.location.name, 'Chennai, Tamil Nadu, India');
+  assert.equal(config.location.latitude, 13.0878);
+  assert.equal(config.location.longitude, 80.2785);
+  assert.equal(config.schedule.intervalMinutes, 10);
+  assert.equal(config.schedule.cooldownHours, 12);
+  assert.equal(config.alerts.rain.threshold, 70);
 });
 
 test('config normalization clamps thresholds and ignores a bad server URL', () => {

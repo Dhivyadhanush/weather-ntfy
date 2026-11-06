@@ -1,6 +1,6 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { DEFAULT_CONFIG, normalizeConfig } from './config.js';
+import { DEFAULT_CONFIG, configFromEnv, hasEnvConfig, normalizeConfig } from './config.js';
 
 const MAX_LOGS = 200;
 
@@ -36,7 +36,12 @@ export class Store {
     await mkdir(this.dir, { recursive: true });
 
     const savedConfig = await readJson(this.configPath, null);
-    if (savedConfig) this.config = normalizeConfig(savedConfig, DEFAULT_CONFIG);
+    if (savedConfig) {
+      this.config = normalizeConfig(savedConfig, DEFAULT_CONFIG);
+    } else if (hasEnvConfig()) {
+      this.config = configFromEnv(process.env, DEFAULT_CONFIG);
+      await this.saveConfig();
+    }
 
     const savedState = await readJson(this.statePath, null);
     if (savedState && typeof savedState === 'object') {
@@ -47,14 +52,15 @@ export class Store {
     if (Array.isArray(savedLogs)) this.logs = savedLogs.slice(0, MAX_LOGS);
   }
 
-  async writeAtomic(file, data) {
-    const tmp = `${file}.${process.pid}.tmp`;
-    await writeFile(tmp, JSON.stringify(data, null, 2), 'utf8');
+  async writeAtomic(file, data, mode = 0o644) {
+    const tmp = `${file}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
+    await writeFile(tmp, JSON.stringify(data, null, 2), { encoding: 'utf8', mode });
     await rename(tmp, file);
+    await chmod(file, mode).catch(() => {});
   }
 
   async saveConfig() {
-    await this.writeAtomic(this.configPath, this.config);
+    await this.writeAtomic(this.configPath, this.config, 0o600);
   }
 
   async saveState() {
