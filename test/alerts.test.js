@@ -113,10 +113,24 @@ test('combined notification keeps every alert and the highest priority', () => {
 
   assert.deepEqual(note.alertIds, ['rain', 'wind']);
   assert.equal(note.priority, 4);
-  assert.match(note.title, /Rain likely/);
-  assert.match(note.message, /Rain likely/);
-  assert.match(note.message, /Strong wind/);
+  assert.match(note.title, /Hey there/);
+  assert.match(note.title, /the sky has plans/);
+  assert.match(note.message, /I guess it's raining/);
+  assert.match(note.message, /hold onto your hat/);
   assert.match(note.message, new RegExp(config.location.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+});
+
+test('single alert uses the configured name in a dramatic headline', () => {
+  const config = makeConfig();
+  config.profile.name = 'Dhanush';
+  const weather = makeWeather({}, [90, 80, 70]);
+  const alerts = evaluateAlerts(weather, config);
+  const note = buildNotification(alerts, weather, config);
+
+  assert.deepEqual(note.alertIds, ['rain']);
+  assert.match(note.title, /Hey Dhanush/);
+  assert.match(note.title, /I guess it's raining/);
+  assert.match(note.message, /grab an umbrella/);
 });
 
 test('environment variables seed the first-run config', () => {
@@ -128,6 +142,7 @@ test('environment variables seed the first-run config', () => {
     WEATHER_LOCATION_NAME: 'Chennai, Tamil Nadu, India',
     WEATHER_LAT: '13.0878',
     WEATHER_LON: '80.2785',
+    WEATHER_NAME: 'Dhanush',
     WEATHER_INTERVAL_MINUTES: '10',
     WEATHER_COOLDOWN_HOURS: '12',
     WEATHER_RAIN_THRESHOLD: '70',
@@ -140,6 +155,7 @@ test('environment variables seed the first-run config', () => {
   assert.equal(config.location.name, 'Chennai, Tamil Nadu, India');
   assert.equal(config.location.latitude, 13.0878);
   assert.equal(config.location.longitude, 80.2785);
+  assert.equal(config.profile.name, 'Dhanush');
   assert.equal(config.schedule.intervalMinutes, 10);
   assert.equal(config.schedule.cooldownHours, 12);
   assert.equal(config.alerts.rain.threshold, 70);

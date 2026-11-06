@@ -5,6 +5,9 @@ export const DEFAULT_CONFIG = {
     longitude: 73.8567,
     timezone: 'auto',
   },
+  profile: {
+    name: 'there',
+  },
   ntfy: {
     server: 'https://ntfy.sh',
     topic: '',
@@ -76,6 +79,11 @@ export function normalizeConfig(input, prev = DEFAULT_CONFIG) {
       longitude: num(loc.longitude, base.location.longitude, -180, 180),
       timezone: 'auto',
     };
+  }
+
+  if (!base.profile) base.profile = { name: 'there' };
+  if (src.profile && typeof src.profile === 'object') {
+    base.profile = { name: str(src.profile.name, base.profile.name, 40) };
   }
 
   if (src.ntfy && typeof src.ntfy === 'object') {
@@ -175,6 +183,7 @@ export function configFromEnv(env = process.env, base = DEFAULT_CONFIG) {
   if (env.WEATHER_LON !== undefined && env.WEATHER_LON !== '') {
     config.location.longitude = Number(env.WEATHER_LON);
   }
+  if (env.WEATHER_NAME) config.profile.name = env.WEATHER_NAME;
 
   if (env.WEATHER_INTERVAL_MINUTES) {
     config.schedule.intervalMinutes = Number(env.WEATHER_INTERVAL_MINUTES);

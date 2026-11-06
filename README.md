@@ -81,10 +81,10 @@ checks). Leave both empty for local-only use. The ntfy token is never sent back 
 the browser; leaving the token field blank keeps the saved one.
 
 Environment variables (`NTFY_URL`, `NTFY_TOPIC`, `NTFY_TOKEN`, `NTFY_DRY_RUN`,
-`WEATHER_LOCATION_NAME`, `WEATHER_LAT`, `WEATHER_LON`, `WEATHER_INTERVAL_MINUTES`,
-`WEATHER_COOLDOWN_HOURS`, `WEATHER_RAIN_THRESHOLD`) seed `data/config.json` on the
-very first boot. After that the dashboard is the source of truth and env changes are
-ignored. Set `DATA_DIR` to relocate the data folder.
+`WEATHER_LOCATION_NAME`, `WEATHER_LAT`, `WEATHER_LON`, `WEATHER_NAME`,
+`WEATHER_INTERVAL_MINUTES`, `WEATHER_COOLDOWN_HOURS`, `WEATHER_RAIN_THRESHOLD`)
+seed `data/config.json` on the very first boot. After that the dashboard is the source
+of truth and env changes are ignored. Set `DATA_DIR` to relocate the data folder.
 
 A `compose.override.yaml` (gitignored) is handy for host-specific ports and networks:
 

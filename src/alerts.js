@@ -23,8 +23,8 @@ export function evaluateAlerts(weather, config) {
       emoji: '🌧️',
       tag: 'umbrella',
       priority: 4,
-      title: 'Rain likely',
-      detail: `${Math.round(rainChance)}% chance in the next 3 hours${mm > 0 ? ` · about ${mm} mm` : ''}`,
+      title: "I guess it's raining",
+      detail: `${Math.round(rainChance)}% chance in the next 3 hours${mm > 0 ? ` · about ${mm} mm` : ''}. The sky means business — grab an umbrella.`,
     });
   }
 
@@ -34,8 +34,8 @@ export function evaluateAlerts(weather, config) {
       emoji: '❄️',
       tag: 'snowflake',
       priority: 4,
-      title: 'Snow expected',
-      detail: `${current.description} · ${fmt(current.temperature)}°C`,
+      title: "it's snowing out there",
+      detail: `${current.description} · ${fmt(current.temperature)}°C. Bundle up before you step outside.`,
     });
   }
 
@@ -45,8 +45,8 @@ export function evaluateAlerts(weather, config) {
       emoji: '💨',
       tag: 'wind_face',
       priority: 3,
-      title: 'Strong wind',
-      detail: `Gusts up to ${Math.round(windGust)} km/h`,
+      title: 'hold onto your hat',
+      detail: `Gusts up to ${Math.round(windGust)} km/h. Secure anything that might fly.`,
     });
   }
 
@@ -57,8 +57,8 @@ export function evaluateAlerts(weather, config) {
       emoji: '☀️',
       tag: 'sunny',
       priority: 2,
-      title: 'Clear and sunny',
-      detail: `${current.description} · ${fmt(current.temperature)}°C · cloud cover ${fmt(current.cloudCover)}%`,
+      title: 'the sun is showing off',
+      detail: `${current.description} · ${fmt(current.temperature)}°C · cloud cover ${fmt(current.cloudCover)}%. Go touch some grass.`,
     });
   }
 
@@ -69,8 +69,8 @@ export function evaluateAlerts(weather, config) {
       emoji: '☁️',
       tag: 'cloud',
       priority: 2,
-      title: 'Overcast and moody',
-      detail: `${current.description} · ${fmt(current.temperature)}°C · cloud cover ${fmt(current.cloudCover)}%`,
+      title: 'the sky is brooding',
+      detail: `${current.description} · ${fmt(current.temperature)}°C · cloud cover ${fmt(current.cloudCover)}%. No sun, just mood.`,
     });
   }
 
@@ -80,8 +80,8 @@ export function evaluateAlerts(weather, config) {
       emoji: '🥵',
       tag: 'thermometer',
       priority: 4,
-      title: 'Heat alert',
-      detail: `${fmt(current.temperature)}°C, feels like ${fmt(current.apparent)}°C`,
+      title: "it's dangerously hot",
+      detail: `${fmt(current.temperature)}°C, feels like ${fmt(current.apparent)}°C. Hydrate and stay in the shade.`,
     });
   }
 
@@ -91,8 +91,8 @@ export function evaluateAlerts(weather, config) {
       emoji: '🥶',
       tag: 'snowflake',
       priority: 4,
-      title: 'Cold alert',
-      detail: `${fmt(current.temperature)}°C, feels like ${fmt(current.apparent)}°C`,
+      title: "it's freezing out there",
+      detail: `${fmt(current.temperature)}°C, feels like ${fmt(current.apparent)}°C. Layer up.`,
     });
   }
 
@@ -103,8 +103,16 @@ export function evaluateAlerts(weather, config) {
 export function buildNotification(freshAlerts, weather, config) {
   const primary = freshAlerts[0];
   const { current, window } = weather;
+  const name = (config.profile?.name ?? 'there').trim() || 'there';
+  const isSingle = freshAlerts.length === 1;
 
-  const lines = freshAlerts.map((a) => `• ${a.emoji} ${a.title} — ${a.detail}`);
+  const title = isSingle
+    ? `${primary.emoji} Hey ${name} — ${primary.title}.`
+    : `${primary.emoji} Hey ${name} — the sky has plans for you.`;
+
+  const lines = isSingle
+    ? [primary.detail]
+    : freshAlerts.map((a) => `• ${a.emoji} ${a.title} — ${a.detail}`);
   lines.push('');
   lines.push(
     `Now: ${current.description}, ${fmt(current.temperature)}°C (feels ${fmt(current.apparent)}°C)`,
@@ -118,7 +126,7 @@ export function buildNotification(freshAlerts, weather, config) {
   const tags = [...new Set(freshAlerts.map((a) => a.tag))].slice(0, 4);
 
   return {
-    title: `${primary.emoji} ${primary.title} — ${config.location.name}`,
+    title,
     message: lines.join('\n'),
     tags,
     priority: Math.max(...freshAlerts.map((a) => a.priority)),

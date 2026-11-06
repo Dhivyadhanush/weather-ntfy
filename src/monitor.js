@@ -225,10 +225,11 @@ export class Monitor {
   }
 
   async sendTest() {
+    const name = (this.config.profile?.name ?? 'there').trim() || 'there';
     const payload = {
-      title: '🛠️ Test from Weather → ntfy',
+      title: `🛠️ Hey ${name} — test incoming!`,
       message: [
-        'Your ntfy setup is working.',
+        'If this pops up on your lock screen, your weather alerts are alive. 🌩️',
         '',
         `Location: ${this.config.location.name}`,
         `Interval: every ${this.config.schedule.intervalMinutes} min`,
