@@ -197,18 +197,28 @@ push only works from a PWA installed via **Share → Add to Home Screen**.
 
 Set `WEATHER_API_TOKEN` to a long random value, restart the container, and call:
 
+**Simplest for Shortcuts (no request body):**
+
+```http
+GET https://weather.example.com/api/location?query=Coimbatore
+X-Weather-Token: <location-api-token>
+```
+
+Coordinates work the same way:
+
+```http
+GET https://weather.example.com/api/location?latitude=11.0168&longitude=76.9558&name=Home
+X-Weather-Token: <location-api-token>
+```
+
+**Or use a JSON body** with `POST`:
+
 ```http
 POST https://weather.example.com/api/location
 Content-Type: application/json
 X-Weather-Token: <location-api-token>
 
 { "query": "Coimbatore" }
-```
-
-Or send exact coordinates:
-
-```json
-{ "name": "Home", "latitude": 11.0168, "longitude": 76.9558 }
 ```
 
 The endpoint validates and saves the location, then runs a weather check. The token
@@ -292,7 +302,7 @@ Data lives in the `./data` volume and survives rebuilds.
 | `GET /api/bootstrap` | Config (token masked), current weather, monitor state, recent logs. |
 | `PUT /api/config` | Save settings (validated + clamped). |
 | `GET /api/geocode?q=pune` | Location search via Open-Meteo geocoding. |
-| `POST /api/location` | Set the location from Shortcuts/scripts (requires `WEATHER_API_TOKEN`). |
+| `GET`/`POST /api/location` | Set the location from Shortcuts/scripts (requires `WEATHER_API_TOKEN`). |
 | `POST /api/check` | Run a check immediately. |
 | `POST /api/test` | Send (or dry-run) a test notification. |
 | `DELETE /api/logs` | Clear the activity log. |

@@ -28,6 +28,22 @@ Wi-Fi network.
 
 ## The endpoint
 
+The easiest form for Shortcuts uses **GET and no request body**:
+
+```http
+GET https://weather.example.com/api/location?query=Coimbatore
+X-Weather-Token: <location-api-token>
+```
+
+Coordinates and a label:
+
+```http
+GET https://weather.example.com/api/location?latitude=11.0168&longitude=76.9558&name=Home
+X-Weather-Token: <location-api-token>
+```
+
+`POST`/`PUT` with a JSON body works too:
+
 ```http
 POST https://weather.example.com/api/location
 Content-Type: application/json
@@ -36,17 +52,7 @@ X-Weather-Token: <location-api-token>
 { "query": "Coimbatore" }
 ```
 
-Or with explicit coordinates:
-
-```json
-{
-  "name": "Home",
-  "latitude": 11.0168,
-  "longitude": 76.9558
-}
-```
-
-`PUT` works too. The response looks like:
+The response looks like:
 
 ```json
 {
@@ -61,18 +67,30 @@ The update saves the config and immediately runs a weather check (which may send
 alert if conditions match). A `query` uses Open-Meteo geocoding and picks the first
 match; coordinates are exact and skip geocoding.
 
-## Shortcut 1: one-tap city
+## If the Request Body keeps opening Photos
+
+In Shortcuts’ **Get Contents of URL** action, “Request Body” has several modes:
+**None / Form / JSON / File**. If tapping it opens the Photos or Files picker, you are
+in **File** mode.
+
+- Tap **Show More**.
+- Tap the **Request Body** dropdown and choose **JSON** (not File).
+- Add a field: key `query`, type **Text** (not File/Image), value `Coimbatore`.
+
+Or just use the **GET** form above — no body, no picker, nothing to configure.
+
+## Shortcut 1: one-tap city (no body)
 
 1. Open **Shortcuts → +**.
 2. Add **Get Contents of URL**.
-3. URL: `https://weather.example.com/api/location`
-4. Tap **Show More** → Method **POST**.
-5. Headers:
-   - `X-Weather-Token`: `<location-api-token>`
-   - `Content-Type`: `application/json` (usually added automatically)
-6. Request Body: **JSON**, add field `query` (Text) = `Coimbatore`.
-7. Optionally add **Get Dictionary from Input** → **Get Dictionary Value** (`message`)
-   → **Show Notification**.
+3. URL:
+   `https://weather.example.com/api/location?query=Coimbatore`
+   (URL-encode spaces, e.g. `New%20York`.)
+4. Tap **Show More** → Method **GET**.
+5. Add header `X-Weather-Token` = `<location-api-token>`.
+6. Leave **Request Body** as **None**.
+7. Optional: **Get Dictionary from Input → Get Dictionary Value** (`message`) →
+   **Show Notification**.
 8. Name it **Set Weather City**, then add it to the Home Screen or assign a Siri
    phrase.
 
@@ -92,13 +110,15 @@ branch and use a JSON body with those fields plus a `name`.
 1. Add **Get Current Location**.
 2. Add **Get Details of Locations** → get `Latitude` and `Longitude`.
 3. Add **Get Contents of URL**:
-   - Method `POST`
+   - Method `GET`
+   - URL:
+     `https://weather.example.com/api/location?latitude=<Latitude>&longitude=<Longitude>&name=Current%20location`
+     (insert the two magic variables into the URL)
    - Header `X-Weather-Token`
-   - JSON body fields: `name` = `Current location`, `latitude` = the variable,
-     `longitude` = the variable.
-4. Optional: **Get Addresses from Input** → **Get Details of Addresses** → `City`,
-   and pass that as `name`.
-5. Allow **Precise Location** for Shortcuts.
+   - Request Body: **None**
+4. Allow **Precise Location** for Shortcuts.
+5. Optional: **Get Addresses from Input → Get Details of Addresses → City** and use
+   that as the `name` value instead of `Current%20location`.
 
 ## Automations
 

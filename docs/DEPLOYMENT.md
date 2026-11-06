@@ -212,6 +212,11 @@ test returns an ntfy HTTP `200`. Check the `weather` topic in the ntfy app.
 location without exposing the dashboard password:
 
 ```bash
+# simplest (no request body)
+curl -s 'https://weather.example.com/api/location?query=Coimbatore' \
+  -H 'X-Weather-Token: <location-api-token>'
+
+# or with a JSON body
 curl -s -X POST https://weather.example.com/api/location \
   -H 'X-Weather-Token: <location-api-token>' \
   -H 'Content-Type: application/json' \

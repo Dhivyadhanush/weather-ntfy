@@ -190,9 +190,11 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, results });
     }
 
-    if (pathname === '/api/location' && (req.method === 'POST' || req.method === 'PUT')) {
-      const body = await readBody(req);
-      const query = typeof body.query === 'string' ? body.query.trim() : '';
+    if (pathname === '/api/location' && ['POST', 'PUT', 'GET'].includes(req.method)) {
+      const body = req.method === 'GET' ? {} : await readBody(req);
+      const queryRaw =
+        typeof body.query === 'string' ? body.query : (url.searchParams.get('query') ?? '');
+      const query = queryRaw.trim();
       let location;
 
       if (query) {
@@ -208,9 +210,14 @@ const server = http.createServer(async (req, res) => {
           timezone: 'auto',
         };
       } else {
-        const latitude = Number(body.latitude);
-        const longitude = Number(body.longitude);
+        const latRaw = body.latitude ?? url.searchParams.get('latitude') ?? url.searchParams.get('lat');
+        const lonRaw =
+          body.longitude ?? url.searchParams.get('longitude') ?? url.searchParams.get('lon');
+        const latitude = Number(latRaw);
+        const longitude = Number(lonRaw);
+        const hasCoords = latRaw !== undefined && latRaw !== null && latRaw !== '';
         if (
+          !hasCoords ||
           !Number.isFinite(latitude) ||
           !Number.isFinite(longitude) ||
           latitude < -90 ||
@@ -220,12 +227,14 @@ const server = http.createServer(async (req, res) => {
         ) {
           return sendJson(res, 400, {
             ok: false,
-            error: 'Provide { "query": "City" } or valid { "latitude": ..., "longitude": ... }.',
+            error:
+              'Provide ?query=City or ?latitude=...&longitude=... (or the same fields in a JSON body).',
           });
         }
+        const nameRaw = body.name ?? url.searchParams.get('name') ?? '';
         const name =
-          typeof body.name === 'string' && body.name.trim()
-            ? body.name.trim().slice(0, 120)
+          typeof nameRaw === 'string' && nameRaw.trim()
+            ? nameRaw.trim().slice(0, 120)
             : `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
         location = { name, latitude, longitude, timezone: 'auto' };
       }
