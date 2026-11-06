@@ -72,7 +72,13 @@ docker compose logs -f
 
 The container listens on `4321` and the default compose file publishes it on
 `127.0.0.1:4321`. Put it behind your own reverse proxy or tunnel if you need remote
-access; the dashboard has no authentication.
+access, and set **Dashboard auth** below — the dashboard can change settings and
+send notifications.
+
+Set `DASHBOARD_USER` and `DASHBOARD_PASS` to require HTTP basic auth on the
+dashboard and API (the `/api/health` endpoint stays open for container health
+checks). Leave both empty for local-only use. The ntfy token is never sent back to
+the browser; leaving the token field blank keeps the saved one.
 
 Environment variables (`NTFY_URL`, `NTFY_TOPIC`, `NTFY_TOKEN`, `NTFY_DRY_RUN`,
 `WEATHER_LOCATION_NAME`, `WEATHER_LAT`, `WEATHER_LON`, `WEATHER_INTERVAL_MINUTES`,

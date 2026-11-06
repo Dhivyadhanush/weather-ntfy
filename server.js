@@ -11,6 +11,8 @@ const PUBLIC_DIR = path.join(__dirname, 'public');
 const PORT = Number(process.env.PORT) || 4321;
 const HOST = process.env.HOST || '127.0.0.1';
 const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(__dirname, 'data');
+const DASHBOARD_USER = process.env.DASHBOARD_USER || '';
+const DASHBOARD_PASS = process.env.DASHBOARD_PASS || '';
 
 const store = new Store(DATA_DIR);
 await store.init();
@@ -56,7 +58,7 @@ async function readBody(req) {
 function snapshot() {
   return {
     ok: true,
-    config: store.config,
+    config: publicConfig(),
     state: { ...store.state, ...monitor.status, nextCheck: monitor.status.nextCheck },
     logs: store.logs.slice(0, 60),
     meta: {
@@ -64,8 +66,31 @@ function snapshot() {
       version: '1.0.0',
       source: 'Open-Meteo (no API key)',
       cooldownDefault: 24,
+      authEnabled: Boolean(DASHBOARD_USER && DASHBOARD_PASS),
     },
   };
+}
+
+/** Never sends the ntfy token back to the browser. */
+function publicConfig() {
+  const config = structuredClone(store.config);
+  const tokenSet = Boolean(config.ntfy.token);
+  config.ntfy.token = '';
+  config.ntfy.tokenSet = tokenSet;
+  return config;
+}
+
+function isAuthorized(req) {
+  if (!DASHBOARD_USER || !DASHBOARD_PASS) return true;
+  const match = /^Basic\s+(.+)$/i.exec(req.headers.authorization ?? '');
+  if (!match) return false;
+  const decoded = Buffer.from(match[1], 'base64').toString('utf8');
+  const separator = decoded.indexOf(':');
+  if (separator < 0) return false;
+  return (
+    decoded.slice(0, separator) === DASHBOARD_USER &&
+    decoded.slice(separator + 1) === DASHBOARD_PASS
+  );
 }
 
 async function geocode(query) {
@@ -111,6 +136,15 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
   const { pathname } = url;
 
+  if (pathname !== '/api/health' && !isAuthorized(req)) {
+    res.writeHead(401, {
+      'WWW-Authenticate': 'Basic realm="Weather ntfy", charset="UTF-8"',
+      'Content-Type': 'text/plain; charset=utf-8',
+    });
+    res.end('Authentication required');
+    return;
+  }
+
   try {
     if (pathname === '/api/health' && req.method === 'GET') {
       return sendJson(res, 200, {
@@ -127,6 +161,10 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/api/config' && req.method === 'PUT') {
       const body = await readBody(req);
+      if (body && typeof body === 'object' && body.ntfy && body.ntfy.token === '' && store.config.ntfy.token) {
+        // An empty field means "keep the saved token"; the browser never receives it.
+        delete body.ntfy.token;
+      }
       store.config = normalizeConfig(body, store.config);
       await store.saveConfig();
       monitor.restart({ runSoon: store.config.schedule.enabled });

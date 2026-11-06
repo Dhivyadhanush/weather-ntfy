@@ -291,7 +291,8 @@ function renderForm(cfg) {
 
   $('ntfyServer').value = cfg.ntfy.server;
   $('ntfyTopic').value = cfg.ntfy.topic;
-  $('ntfyToken').value = cfg.ntfy.token;
+  $('ntfyToken').value = '';
+  $('ntfyToken').placeholder = cfg.ntfy.tokenSet ? 'saved — leave blank to keep' : 'tk_…';
   $('interval').value = cfg.schedule.intervalMinutes;
   $('cooldown').value = cfg.schedule.cooldownHours;
   $('monitorEnabled').checked = cfg.schedule.enabled;
@@ -318,7 +319,9 @@ function readForm() {
 
   cfg.ntfy.server = $('ntfyServer').value.trim();
   cfg.ntfy.topic = $('ntfyTopic').value.trim();
-  cfg.ntfy.token = $('ntfyToken').value.trim();
+  const token = $('ntfyToken').value.trim();
+  if (token) cfg.ntfy.token = token;
+  else delete cfg.ntfy.token;
   cfg.ntfy.dryRun = $('dryRun').checked;
 
   cfg.alerts.rain.enabled = $('rainEnabled').checked;
