@@ -294,6 +294,7 @@ function renderForm(cfg) {
   $('ntfyToken').value = '';
   $('ntfyToken').placeholder = cfg.ntfy.tokenSet ? 'saved — leave blank to keep' : 'tk_…';
   $('profileName').value = cfg.profile?.name === 'there' ? '' : cfg.profile?.name ?? '';
+  $('minPriority').value = String(cfg.ntfy.minPriority ?? 0);
   $('interval').value = cfg.schedule.intervalMinutes;
   $('cooldown').value = cfg.schedule.cooldownHours;
   $('monitorEnabled').checked = cfg.schedule.enabled;
@@ -324,6 +325,7 @@ function readForm() {
   if (token) cfg.ntfy.token = token;
   else delete cfg.ntfy.token;
   cfg.ntfy.dryRun = $('dryRun').checked;
+  cfg.ntfy.minPriority = Number($('minPriority').value) || 0;
   cfg.profile = { name: $('profileName').value.trim() || 'there' };
 
   cfg.alerts.rain.enabled = $('rainEnabled').checked;

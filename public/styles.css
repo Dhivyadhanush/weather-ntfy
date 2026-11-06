@@ -468,6 +468,7 @@ input[type="text"],
 input[type="url"],
 input[type="password"],
 input[type="number"],
+select,
 input:not([type]) {
   width: 100%;
   background: rgba(8, 12, 21, 0.65);
@@ -484,6 +485,16 @@ input:not([type]) {
 input:focus {
   border-color: rgba(125, 211, 252, 0.45);
   box-shadow: var(--ring);
+}
+
+select {
+  appearance: none;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, #8d97b2 50%), linear-gradient(135deg, #8d97b2 50%, transparent 50%);
+  background-position: calc(100% - 18px) calc(50% + 1px), calc(100% - 13px) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
 }
 
 input::placeholder {

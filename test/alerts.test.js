@@ -133,12 +133,28 @@ test('single alert uses the configured name in a dramatic headline', () => {
   assert.match(note.message, /grab an umbrella/);
 });
 
+test('minimum priority raises every alert', () => {
+  const config = makeConfig();
+  config.ntfy.minPriority = 5;
+  config.alerts.sunny.enabled = true;
+
+  const weather = makeWeather({ cloud: 5 });
+  const alerts = evaluateAlerts(weather, config);
+
+  assert.deepEqual(alerts.map((a) => a.id), ['sunny']);
+  assert.equal(alerts[0].priority, 5);
+
+  const note = buildNotification(alerts, weather, config);
+  assert.equal(note.priority, 5);
+});
+
 test('environment variables seed the first-run config', () => {
   const config = configFromEnv({
     NTFY_URL: 'http://ntfy:80',
     NTFY_TOPIC: 'weather',
     NTFY_TOKEN: 'tk_testvalue',
     NTFY_DRY_RUN: 'false',
+    NTFY_MIN_PRIORITY: '5',
     WEATHER_LOCATION_NAME: 'Chennai, Tamil Nadu, India',
     WEATHER_LAT: '13.0878',
     WEATHER_LON: '80.2785',
@@ -152,6 +168,7 @@ test('environment variables seed the first-run config', () => {
   assert.equal(config.ntfy.topic, 'weather');
   assert.equal(config.ntfy.token, 'tk_testvalue');
   assert.equal(config.ntfy.dryRun, false);
+  assert.equal(config.ntfy.minPriority, 5);
   assert.equal(config.location.name, 'Chennai, Tamil Nadu, India');
   assert.equal(config.location.latitude, 13.0878);
   assert.equal(config.location.longitude, 80.2785);

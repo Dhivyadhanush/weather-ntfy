@@ -13,6 +13,7 @@ export const DEFAULT_CONFIG = {
     topic: '',
     token: '',
     dryRun: true,
+    minPriority: 0,
   },
   alerts: {
     rain: { enabled: true, threshold: 80 },
@@ -93,6 +94,7 @@ export function normalizeConfig(input, prev = DEFAULT_CONFIG) {
       topic: cleanTopic(n.topic ?? base.ntfy.topic),
       token: typeof n.token === 'string' ? n.token.trim().slice(0, 500) : base.ntfy.token,
       dryRun: bool(n.dryRun, base.ntfy.dryRun),
+      minPriority: Math.round(num(n.minPriority, base.ntfy.minPriority, 0, 5)),
     };
   }
 
@@ -175,6 +177,7 @@ export function configFromEnv(env = process.env, base = DEFAULT_CONFIG) {
   if (env.NTFY_TOPIC) config.ntfy.topic = env.NTFY_TOPIC;
   if (env.NTFY_TOKEN) config.ntfy.token = env.NTFY_TOKEN;
   config.ntfy.dryRun = envBool(env.NTFY_DRY_RUN, config.ntfy.dryRun);
+  if (env.NTFY_MIN_PRIORITY) config.ntfy.minPriority = Number(env.NTFY_MIN_PRIORITY);
 
   if (env.WEATHER_LOCATION_NAME) config.location.name = env.WEATHER_LOCATION_NAME;
   if (env.WEATHER_LAT !== undefined && env.WEATHER_LAT !== '') {

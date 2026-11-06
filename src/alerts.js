@@ -96,7 +96,10 @@ export function evaluateAlerts(weather, config) {
     });
   }
 
-  return out.sort((a, b) => b.priority - a.priority);
+  const minPriority = Number(config.ntfy.minPriority) || 0;
+  return out
+    .sort((a, b) => b.priority - a.priority)
+    .map((alert) => ({ ...alert, priority: Math.max(alert.priority, minPriority) }));
 }
 
 /** Builds one combined ntfy message from every alert that is past its cooldown. */

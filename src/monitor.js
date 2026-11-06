@@ -237,7 +237,7 @@ export class Monitor {
         `Time: ${new Date().toISOString()}`,
       ].join('\n'),
       tags: ['test_tube'],
-      priority: 3,
+      priority: Math.max(3, Number(this.config.ntfy.minPriority) || 0),
     };
 
     const delivery = await sendNtfy(this.config.ntfy, payload);

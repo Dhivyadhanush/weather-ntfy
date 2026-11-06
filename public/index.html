@@ -192,9 +192,18 @@
                 <span>Access token <em>(optional)</em></span>
                 <input id="ntfyToken" type="password" placeholder="tk_…" />
               </label>
-              <label class="field field-wide">
+              <label class="field">
                 <span>Alert name <em>(used in the message)</em></span>
                 <input id="profileName" type="text" placeholder="Dhanush" maxlength="40" />
+              </label>
+              <label class="field">
+                <span>Notification priority</span>
+                <select id="minPriority">
+                  <option value="0">Per-alert (default)</option>
+                  <option value="3">Normal</option>
+                  <option value="4">High</option>
+                  <option value="5">Urgent — break through</option>
+                </select>
               </label>
             </div>
 
