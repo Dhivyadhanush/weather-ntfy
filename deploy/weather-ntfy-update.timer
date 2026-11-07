@@ -1,0 +1,11 @@
+[Unit]
+Description=Check Weather → ntfy for GitHub updates every 6 hours
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:15:00
+RandomizedDelaySec=10m
+Persistent=true
+Unit=weather-ntfy-update.service
+
+[Install]
+WantedBy=timers.target

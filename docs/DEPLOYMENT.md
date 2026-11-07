@@ -283,6 +283,42 @@ docker compose up -d --build
 sudo tar -czf weather-ntfy-backup.tgz .env data
 ```
 
+### Automatic updates
+
+`scripts/update.sh` fetches `main`, fast-forwards the checkout, rebuilds **only** the
+`weather-ntfy` compose service with `--no-deps`, waits for `/api/health`, and rolls
+back to the previous commit if the build or health check fails. It pins
+`COMPOSE_PROJECT_NAME` and never runs `down`, `prune` or touches other stacks.
+
+```bash
+./scripts/update.sh --check   # is origin/main newer?
+./scripts/update.sh           # apply an update (no-op when current)
+./scripts/update.sh --force   # rebuild/restart the current commit
+```
+
+Install the timer to check every 6 hours:
+
+```bash
+sudo install -m 644 deploy/weather-ntfy-update.service /etc/systemd/system/
+sudo install -m 644 deploy/weather-ntfy-update.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now weather-ntfy-update.timer
+systemctl list-timers weather-ntfy-update.timer
+
+# Manual run / logs
+sudo systemctl start weather-ntfy-update.service
+journalctl -u weather-ntfy-update.service -n 100 --no-pager
+```
+
+The unit assumes the repo is at `/opt/stacks/weather-ntfy`, the service runs as
+`server1`, and the app listens on `172.17.0.1:3102`. Adjust `User`, `WorkingDirectory`
+and `HEALTH_URL` in the unit if your setup differs.
+
+Auto-deploying `main` executes whatever is in the repository on your host. Only
+enable it for a repo/account you trust, keep branch protection on, and never commit
+secrets. A compromised GitHub account would otherwise be able to run code on the
+server.
+
 Rotate the ntfy token:
 
 1. Create a new token for `weatherpublisher`.

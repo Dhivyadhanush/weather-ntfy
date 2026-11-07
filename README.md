@@ -388,10 +388,25 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for a complete server runbook.
 
 ## Updating
 
+Manual:
+
 ```bash
 git pull
 docker compose up -d --build
 ```
+
+Or use the safe self-update script:
+
+```bash
+./scripts/update.sh --check   # report whether main has a new commit
+./scripts/update.sh           # pull, rebuild, health-check, roll back on failure
+./scripts/update.sh --force   # rebuild the current commit anyway
+```
+
+It pins the compose project, targets only the `weather-ntfy` service with
+`--no-deps`, and never runs `down`, `prune` or anything that affects other Docker
+stacks. A systemd timer can run it automatically every 6 hours; see
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#automatic-updates).
 
 Data lives in the `./data` volume and survives rebuilds.
 

@@ -1,0 +1,19 @@
+[Unit]
+Description=Update Weather → ntfy from GitHub
+Documentation=https://github.com/Dhivyadhanush/weather-ntfy
+After=network-online.target docker.service
+Wants=network-online.target
+ConditionPathExists=/opt/stacks/weather-ntfy/.git
+
+[Service]
+Type=oneshot
+User=server1
+Group=server1
+SupplementaryGroups=docker
+WorkingDirectory=/opt/stacks/weather-ntfy
+Environment=COMPOSE_PROJECT_NAME=weather-ntfy
+Environment=HEALTH_URL=http://172.17.0.1:3102/api/health
+ExecStart=/bin/bash /opt/stacks/weather-ntfy/scripts/update.sh
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=20min
