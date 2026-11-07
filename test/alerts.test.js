@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildNotification, evaluateAlerts } from '../src/alerts.js';
 import { DEFAULT_CONFIG, configFromEnv, normalizeConfig } from '../src/config.js';
+import { Monitor } from '../src/monitor.js';
 
 function makeConfig(overrides = {}) {
   const config = structuredClone(DEFAULT_CONFIG);
@@ -176,6 +177,19 @@ test('environment variables seed the first-run config', () => {
   assert.equal(config.schedule.intervalMinutes, 10);
   assert.equal(config.schedule.cooldownHours, 12);
   assert.equal(config.alerts.rain.threshold, 70);
+});
+
+test('zero cooldown makes every check fresh', () => {
+  const store = { state: { lastSent: { rain: new Date().toISOString() } }, config: {} };
+  const monitor = new Monitor(store);
+
+  assert.equal(monitor.isFresh('rain', new Date(), 0), true);
+  assert.equal(monitor.isFresh('rain', new Date(), 24 * 3_600_000), false);
+});
+
+test('config allows a zero-hour cooldown', () => {
+  const config = normalizeConfig({ schedule: { cooldownHours: 0 } }, DEFAULT_CONFIG);
+  assert.equal(config.schedule.cooldownHours, 0);
 });
 
 test('config normalization clamps thresholds and ignores a bad server URL', () => {

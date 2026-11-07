@@ -50,8 +50,9 @@ Open-Meteo:
 
 If several rules fire, they are merged into one ntfy message. Each rule keeps its own
 cooldown timestamp, so a rain alert sent at 09:00 blocks the next rain alert until
-09:00 the next day, while wind can still notify sooner. Dry runs do **not** consume
-the cooldown.
+09:00 the next day, while wind can still notify sooner. Set the cooldown to **0** to
+notify on **every** check instead — useful for frequent rain/heat updates (for
+example every 3 hours). Dry runs do **not** consume the cooldown.
 
 ## Quick start (local)
 
@@ -88,7 +89,7 @@ dashboard is the source of truth.
 | `WEATHER_LOCATION_NAME` | Pune | Display name of the location. |
 | `WEATHER_LAT` / `WEATHER_LON` | Pune | Coordinates. |
 | `WEATHER_INTERVAL_MINUTES` | `5` | How often to check. |
-| `WEATHER_COOLDOWN_HOURS` | `24` | Per-condition cooldown. |
+| `WEATHER_COOLDOWN_HOURS` | `24` | Per-condition cooldown; `0` means notify on every check. |
 | `WEATHER_RAIN_THRESHOLD` | `80` | Rain probability threshold, 1–100. |
 | `DASHBOARD_USER` / `DASHBOARD_PASS` | empty | Set both to require HTTP basic auth on the dashboard/API. |
 | `WEATHER_API_TOKEN` | empty | Enables `POST /api/location` for iPhone Shortcuts/scripts. |

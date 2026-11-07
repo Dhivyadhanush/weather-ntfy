@@ -140,7 +140,7 @@ export function normalizeConfig(input, prev = DEFAULT_CONFIG) {
     base.schedule = {
       enabled: bool(s.enabled, base.schedule.enabled),
       intervalMinutes: Math.round(num(s.intervalMinutes, base.schedule.intervalMinutes, 1, 1440)),
-      cooldownHours: num(s.cooldownHours, base.schedule.cooldownHours, 1, 168),
+      cooldownHours: num(s.cooldownHours, base.schedule.cooldownHours, 0, 168),
     };
   }
 
