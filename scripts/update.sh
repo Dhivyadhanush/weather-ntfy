@@ -97,7 +97,7 @@ NEW="$(git rev-parse HEAD)"
 
 # --no-deps + explicit service + pinned project: only this service is rebuilt.
 build_up() {
-  docker compose up -d --build --no-deps "$SERVICE"
+  docker compose up -d --build --no-deps --force-recreate "$SERVICE"
 }
 
 wait_healthy() {
