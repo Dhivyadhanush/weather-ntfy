@@ -97,6 +97,21 @@ dashboard is the source of truth.
 | `PORT` | `4321` | Listen port. |
 | `DATA_DIR` | `./data` | Where config/state/logs are stored. |
 
+### Frequent rain/heat mode
+
+To check every **3 hours** and send an update on **every** check while rain/heat
+conditions persist:
+
+```dotenv
+WEATHER_INTERVAL_MINUTES=180
+WEATHER_COOLDOWN_HOURS=0
+WEATHER_RAIN_THRESHOLD=80
+```
+
+Then in the dashboard enable **Rain** and **Heat** (35°C default) and turn off the
+rules you don't care about. With `cooldownHours: 0`, the rain/heat alert repeats every
+check instead of waiting 24 hours.
+
 ## ntfy setup
 
 ### Option A: ntfy.sh (easiest)

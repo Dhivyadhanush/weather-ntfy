@@ -187,8 +187,12 @@ test('zero cooldown makes every check fresh', () => {
   assert.equal(monitor.isFresh('rain', new Date(), 24 * 3_600_000), false);
 });
 
-test('config allows a zero-hour cooldown', () => {
-  const config = normalizeConfig({ schedule: { cooldownHours: 0 } }, DEFAULT_CONFIG);
+test('config allows a 3-hour cadence with zero cooldown', () => {
+  const config = normalizeConfig(
+    { schedule: { intervalMinutes: 180, cooldownHours: 0 } },
+    DEFAULT_CONFIG,
+  );
+  assert.equal(config.schedule.intervalMinutes, 180);
   assert.equal(config.schedule.cooldownHours, 0);
 });
 
